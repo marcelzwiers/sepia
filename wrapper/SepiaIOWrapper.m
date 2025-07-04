@@ -29,7 +29,7 @@
 % Date modified: 6 May 2021 (v0.8.1.1)
 % Date modified: 13 August 2021 (v1.0)
 % Date modified: 12 September 2022 (v1.1)
-% Date modified: 4 July 2025 (v??)
+% Date modified: 16 November 2025 (v2): Add support to bids fMRI/fQSM format
 %
 function [chi,localField,totalField,fieldmapSD]=SepiaIOWrapper(input,output,maskFullName,algorParam)
 %% add general Path and universal variables
@@ -76,7 +76,16 @@ disp('---------');
 % prefix        : output basename (only for BIDS)
 % inputDir      : intput directory of phase image
 % inputFileList : structure contains all input filenames
-[inputDir, inputFileList]	= io_01_get_input_file_list(input, outputDir, prefix);
+[inputDir, inputNiftiCell]	= io_01_get_input_file_list(input, outputDir, prefix);
+
+nVol = numel(inputNiftiCell);
+for v = 1:nVol
+
+if nVol > 1; fprintf('Processing #%i/%i volume\n',v,nVol); end
+
+% load current inputFileList
+inputFileList = inputNiftiCell{v}.inputNIFTIList;
+if nVol > 1; outputFileList = construct_output_filename(outputDir, strcat(prefix,'vol-',num2str(v),'_'), algorParam); end
 
 %%%%% Step 2: validate input files
 % 2.2 validate nifti files
@@ -134,6 +143,8 @@ availableFileList           = io_06_get_signal_mask(maskFullName, inputDir, sepi
 % outputFileList        : structure contains default output filenames
 % outputNiftiTemplate   : nifti header with empty 'img' field
 availableFileList           = io_07_refine_signal_mask(sepia_header, algorParam, availableFileList, outputFileList, outputNiftiTemplate);
+% for multi-volume, make sure the same mask is used throughout the process
+if nVol > 1; maskFullName = availableFileList.mask; end
 
 %%%%%% Step 8: Tensor-MPPCA denoising
 % sepia_header          : sepia header
@@ -355,19 +366,29 @@ end
 fprintf('done!\n');
 
 disp('Processing pipeline is completed!');
-          
+
+end
+
+% concatenate multiple volumes if needed
+if nVol > 1
+    tmp = [];
+    for v = 1:nVol  
+        tmp = cat(4,tmp,load_nii_img_only(fullfile(outputDir, strcat(prefix,'vol-',num2str(v),'_Chimap.nii.gz'))));
+    end
+    save_nii_img_only(fullfile(outputDir, strcat(prefix,'vol-',num2str(v),'_Chimap.nii.gz')), fullfile(outputDir, strcat(prefix,'Chimap.nii.gz')),tmp);
+end
 end
 
 %% I/O Step 1: get input file list
-function [inputDir, inputNiftiList] = io_01_get_input_file_list(input,outputDir,prefix)
+function [inputDir, inputNiftiCell] = io_01_get_input_file_list(input,outputDir,prefix)
 
 if isstruct(input)
     
     % Option 1: input are files
-    inputNiftiList  = input;
+    inputNiftiCell{1}.inputNIFTIList  = input;
     
     % take the phase data directory as reference input directory 
-    [inputDir,~,~] = fileparts(inputNiftiList(1).name);
+    [inputDir,~,~] = fileparts(inputNiftiCell{1}.inputNIFTIList(1).name);
     
 else
     
@@ -377,18 +398,19 @@ else
     % First check with SEPIA default naming structure
     disp('Searching input directory based on SEPIA default naming structure...');
     filePattern = {'ph','mag','weights','header'}; % don't change the order
-    [isLoadSuccessful, inputNiftiList] = read_default_to_filelist(inputDir, filePattern);
+    [isLoadSuccessful, inputNIFTIList] = read_default_to_filelist(inputDir, filePattern);
     
     % If it doesn't work then check again for 'phase' instead of 'ph'
     if ~isLoadSuccessful
         filePattern = {'phase','mag','weights','header'}; % don't change the order
-        [isLoadSuccessful, inputNiftiList] = read_default_to_filelist(inputDir, filePattern);
+        [isLoadSuccessful, inputNIFTIList] = read_default_to_filelist(inputDir, filePattern);
     end
+    inputNiftiCell{1}.inputNIFTIList = inputNIFTIList;
     
     % If it doesn't work then check BIDS compatibility
     if ~isLoadSuccessful
         disp('Searching input directory based on BIDS...');
-        inputNiftiList = read_bids_to_filelist(inputDir,fullfile(outputDir,prefix));
+        inputNiftiCell = read_bids_to_filelist(inputDir,fullfile(outputDir,prefix));
     end
     
 end
