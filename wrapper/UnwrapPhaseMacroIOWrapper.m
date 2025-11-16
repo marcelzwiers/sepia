@@ -452,9 +452,18 @@ end
 %% I/O Step 6: loading signal mask
 function availableFileList          = io_06_get_signal_mask(maskFullName, inputDir, sepia_header, algorParam, availableFileList, outputFileList, outputNiftiTemplate)
 
+sepia_universal_variables;
+
 isBET               = algorParam.general.isBET;
-fractional_threshold= algorParam.general.fractional_threshold;
-gradient_threshold  = algorParam.general.gradient_threshold;
+if isfield(algorParam.general, 'brain_extraction_method')
+    brainExtractMethod  = algorParam.general.brain_extraction_method;
+else
+    brainExtractMethod = skullstrippingMethod{1};
+end
+if strcmp(brainExtractMethod,skullstrippingMethod{1})
+    fractional_threshold    = algorParam.general.fractional_threshold;
+    gradient_threshold      = algorParam.general.gradient_threshold;
+end
 
 matrixSize  = sepia_header.matrixSize;
 voxelSize   = sepia_header.voxelSize;

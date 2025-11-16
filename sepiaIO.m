@@ -14,15 +14,31 @@
 % k.chan@donders.ru.nl
 % Date created: 29 June 2020 (v0.8.0)
 % Date modified: 27 Jan 2021 (v0.8.1)
+% Date modified: 11 Sep 2025 (v1.3.0)
 %
 %
 function sepiaIO(input,output,maskFullName,algorParam)
 
 %%% Step 1 %%%
 currDir = pwd;
+% 20250911 KC: fixed relative path
+if isstruct(input)
+    for k = 1:numel(input)
+        if ~isempty(input(k).name) && isRelativePath(input(k).name)
+            input(k).name = fullfile(pwd,input(k).name);
+        end
+    end
+end
+if ~isempty(maskFullName) && isRelativePath(maskFullName)
+    maskFullName = fullfile(pwd,maskFullName);
+end
+if isRelativePath(output)
+    output = fullfile(pwd,output);
+end
+
 % 1.1: get and create output directory
 output_index    = strfind(output, filesep);
-outputDir       = output(1:output_index(end));
+outputDir       = output(1:output_index(end));   
 % if the output directory does not exist then create the directory
 if exist(outputDir,'dir') ~= 7
     mkdir(outputDir);
@@ -154,7 +170,8 @@ output_index    = strfind(output, filesep);
 outputDir       = output(1:output_index(end));
 
 % create a new m file
-configFileList    = dir(fullfile(outputDir,'*sepia_config*.m*'));
+% configFileList    = dir(fullfile(outputDir,'*sepia_config*.m*'));
+configFileList = []; % 20250919 KC: always export config file
 if ~isempty(configFileList)
     isConfigFileExist = true;
     disp('SEPIA configuration file already exists in the output directory.')
