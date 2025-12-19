@@ -380,7 +380,8 @@ fprintf(fid,'\nsepiaIO(input,output_basename,mask_filename,algorParam);\n');
 fclose(fid);
 
 % Parse the algorithm parameters from the config file
-h.algorParam = parse_sepia_config_file(configFilename);
+h.fig.UserData.algorParam = parse_sepia_config_file(configFilename);
+uiresume(h.fig)
 
 try
     % run process
