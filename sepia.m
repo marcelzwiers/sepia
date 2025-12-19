@@ -381,7 +381,7 @@ fclose(fid);
 
 % Parse the algorithm parameters from the config file
 h.fig.UserData.algorParam = parse_sepia_config_file(configFilename);
-uiresume(h.fig)
+uiresume(h.fig)     % Typically, external code would call uiwait(h.fig) to wait for the algorParam to be ready
 
 try
     % run process
