@@ -82,6 +82,7 @@ end
 % create GUI figure
 h.fig=figure('Units','pixels','position',[posLeft posBottom guiSizeHori guiSizeVert],...
     'MenuBar','None','Toolbar','None','Name',['SEPIA GUI (' SEPIA_version ')'],'NumberTitle','off');
+h.fig.CloseRequestFcn = @onClose;
 
 %% construct panels for each tab 
 % create Tabs for GUI
@@ -700,4 +701,10 @@ try
 catch
     warndlg('Missing ANTs library. All functions in Analysis Tab cannot be used.')
 end
+end
+
+function onClose(~,~)
+    global h
+    delete(h.fig)
+    clear global h
 end
